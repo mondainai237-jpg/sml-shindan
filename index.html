@@ -1,0 +1,381 @@
+<title>SML診断</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #faf7f1; --surface: #ffffff; --surface-2: #f2ede3;
+    --ink: #1c2230; --ink-secondary: #55564f; --ink-muted: #8b897e;
+    --accent: #2c4a6e; --accent-ink: #ffffff; --accent-soft: #e4ebf1;
+    --accent2: #b1583a; --accent2-soft: #f4e2d8;
+    --border: rgba(28,34,48,0.13); --border-strong: rgba(28,34,48,0.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #14181f; --surface: #1b2028; --surface-2: #232a35;
+      --ink: #f3f1ea; --ink-secondary: #c7c4b9; --ink-muted: #8f8d84;
+      --accent: #86adde; --accent-ink: #101722; --accent-soft: #253347;
+      --accent2: #e2916d; --accent2-soft: #3a271e;
+      --border: rgba(243,241,234,0.14); --border-strong: rgba(243,241,234,0.24);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14181f; --surface: #1b2028; --surface-2: #232a35;
+    --ink: #f3f1ea; --ink-secondary: #c7c4b9; --ink-muted: #8f8d84;
+    --accent: #86adde; --accent-ink: #101722; --accent-soft: #253347;
+    --accent2: #e2916d; --accent2-soft: #3a271e;
+    --border: rgba(243,241,234,0.14); --border-strong: rgba(243,241,234,0.24);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Zen Kaku Gothic New", "Hiragino Sans", sans-serif; line-height: 1.7; min-height: 100vh; }
+  h1, h2 { font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif; text-wrap: balance; margin: 0; color: var(--ink); }
+  .stage { max-width: 520px; margin: 0 auto; padding: 40px 20px 80px; min-height: 100vh; display: flex; flex-direction: column; }
+  [hidden] { display: none !important; }
+
+  .intro { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.14em; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+  .intro h1 { font-size: clamp(1.8rem, 6vw, 2.3rem); font-weight: 800; }
+  .intro p { color: var(--ink-secondary); font-size: 15px; max-width: 46ch; }
+  .name-field label { display: block; font-size: 13px; color: var(--ink-secondary); margin-bottom: 6px; }
+  .name-input {
+    width: 100%; padding: 13px 16px; border-radius: 10px;
+    border: 1.5px solid var(--border-strong); background: var(--surface);
+    color: var(--ink); font-size: 15px; font-family: inherit;
+  }
+  .name-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn-primary {
+    align-self: flex-start; background: var(--accent); color: var(--accent-ink);
+    border: none; padding: 15px 34px; border-radius: 999px; font-size: 15px;
+    font-weight: 700; font-family: "Zen Kaku Gothic New", sans-serif; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .meta-note { font-size: 12px; color: var(--ink-muted); }
+
+  .quiz { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+  .progress-head { display: flex; flex-direction: column; gap: 10px; }
+  .progress-top-row { display: flex; justify-content: flex-end; }
+  .q-counter { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .progress-track { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
+
+  .q-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 36px 26px; flex: 1; display: flex; flex-direction: column; gap: 30px; justify-content: center;
+  }
+  .q-card h2 { font-size: clamp(1.1rem, 4.8vw, 1.35rem); font-weight: 700; text-align: center; }
+
+  .scale { display: flex; flex-direction: column; gap: 14px; }
+  .scale-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-muted); padding: 0 2px; }
+  .scale-row { display: flex; justify-content: space-between; gap: 8px; }
+  .scale-btn {
+    flex: 1; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid var(--border-strong);
+    background: var(--surface-2); color: var(--ink-secondary); font-family: "Shippori Mincho", serif;
+    font-weight: 700; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .scale-btn:hover { border-color: var(--accent); }
+  .scale-btn:active { transform: scale(0.94); }
+  .scale-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .vitality-value {
+    text-align: center; font-family: "Shippori Mincho", serif; font-weight: 800;
+    font-size: 2.4rem; color: var(--accent);
+  }
+  .vitality-slider {
+    width: 100%; accent-color: var(--accent); height: 6px; cursor: pointer;
+  }
+
+  .quiz-nav { display: flex; justify-content: space-between; align-items: center; }
+  .btn-ghost { background: none; border: none; color: var(--ink-muted); font-size: 13px; cursor: pointer; font-family: inherit; padding: 6px 4px; }
+  .btn-ghost:hover { color: var(--ink); }
+  .btn-ghost:disabled { opacity: 0.35; cursor: default; }
+
+  .done { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; text-align: center; }
+  .done h1 { font-size: clamp(1.6rem, 6vw, 2rem); font-weight: 800; }
+  .done p { color: var(--ink-secondary); font-size: 14.5px; max-width: 42ch; }
+  .code-box {
+    background: var(--surface); border: 1.5px dashed var(--border-strong); border-radius: 14px;
+    padding: 18px 20px; font-family: "Shippori Mincho", serif; font-size: 15px; letter-spacing: 0.04em;
+    color: var(--accent); word-break: break-all; max-width: 100%;
+  }
+  .copy-feedback { font-size: 12px; color: var(--accent); min-height: 16px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+
+<div class="stage">
+
+  <!-- ===== INTRO ===== -->
+  <div class="intro" id="screen-intro">
+    <span class="eyebrow">令和外食塾2026｜テスト版</span>
+    <h1>SML診断</h1>
+    <p>あなたが飲食の仕事でどんな時に力を発揮しやすいかを診断します。正解・不正解はありません。
+    直感で、深く考えずに答えてください。所要時間の目安は8〜9分です。</p>
+    <div class="name-field">
+      <label for="name-input">お名前（任意）</label>
+      <input type="text" id="name-input" class="name-input" placeholder="例：山田太郎">
+    </div>
+    <button class="btn-primary" id="btn-start">診断をはじめる</button>
+    <p class="meta-note">※診断結果はこの画面には表示されません。回答後に出るコードを、担当の方にお渡しください。</p>
+  </div>
+
+  <!-- ===== QUIZ ===== -->
+  <div class="quiz" id="screen-quiz" hidden>
+    <div class="progress-head">
+      <div class="progress-top-row"><span class="q-counter" id="q-counter">1 / 75</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div class="q-card">
+      <h2 id="q-text"></h2>
+      <div class="scale">
+        <div class="scale-row" id="scale-row"></div>
+        <div class="scale-labels"><span id="scale-label-left"></span><span id="scale-label-right"></span></div>
+      </div>
+    </div>
+    <div class="quiz-nav">
+      <button class="btn-ghost" id="btn-back">← 前の質問に戻る</button>
+      <span></span>
+    </div>
+  </div>
+
+  <!-- ===== VITALITY (店の活気について、個人の気質とは別枠) ===== -->
+  <div class="quiz" id="screen-vitality" hidden>
+    <div class="progress-head">
+      <div class="progress-top-row"><span class="q-counter">最後にもう一つ</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+    </div>
+    <div class="q-card">
+      <h2>今のお店の活気（元気さ・盛り上がり）は、100点満点中何点くらいだと思いますか？</h2>
+      <div class="vitality-value" id="vitality-value">50</div>
+      <input type="range" min="0" max="100" step="5" value="50" class="vitality-slider" id="vitality-slider">
+      <div class="scale-labels"><span>元気がない</span><span>とても活気がある</span></div>
+    </div>
+    <div class="quiz-nav">
+      <span></span>
+      <button class="btn-primary" id="btn-vitality-next" style="padding:11px 26px;font-size:14px">回答を終える</button>
+    </div>
+  </div>
+
+  <!-- ===== DONE ===== -->
+  <div class="done" id="screen-done" hidden>
+    <span class="eyebrow">回答ありがとうございました</span>
+    <h1>診断が完了しました</h1>
+    <p>下のコードを、担当の方に送ってください。コード自体に意味はわかりませんが、
+    担当の方が専用ツールで結果を確認します。</p>
+    <div class="code-box" id="code-box"></div>
+    <button class="btn-primary" id="btn-copy">コードをコピーする</button>
+    <p class="copy-feedback" id="copy-feedback"></p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // dim order fixed for the code: 関 実 品 接 清 表 省 鳥 虫 魚 競 協
+  var DIM_ORDER = ["kan", "jitsu", "hin", "setsu", "sei_c", "hyo", "sei_e", "tori", "mushi", "sakana", "kyoso", "kyocho"];
+
+  // scale types: どの言い回しの設問かによって、5段階の両端ラベルを変える
+  var SCALE_LABELS = {
+    omou:      ["全くそう思わない", "とてもそう思う"],
+    kininaru:  ["全く気にならない", "とても気になる"],
+    tokui:     ["全く得意ではない", "とても得意"],
+    ateha:     ["全く当てはまらない", "とても当てはまる"]
+  };
+
+  var STATEMENTS_MASTER = [
+    { dim: "kan",    scale: "omou",     text: "新しい後輩が緊張している様子を見ると、まず声をかけて場を和ませたくなる" },
+    { dim: "hin",    scale: "omou",     text: "忙しい営業中でも、盛り付けのわずかなズレが目に入ると、つい直したくなる" },
+    { dim: "hyo",    scale: "ateha",    text: "予約が急に埋まって嬉しい時、その場で声や表情にすぐ出てしまう" },
+    { dim: "tori",   scale: "kininaru", text: "忙しい営業中、ふと店全体を見渡してバランスを確認したくなる" },
+    { dim: "jitsu",  scale: "omou",     text: "一度「やる」と決めたことは、多少大変でも最後までやり切りたくなる" },
+    { dim: "setsu",  scale: "omou",     text: "お客様の表情が少し曇っていると、声をかけずにはいられない" },
+    { dim: "sei_e",  scale: "omou",     text: "トラブルが起きた直後は、まず一人で状況を整理してから動きたくなる" },
+    { dim: "mushi",  scale: "kininaru", text: "接客中、目の前のお客様のちょっとした表情の変化がまず気になる" },
+    { dim: "sei_c",  scale: "omou",     text: "営業中でも、床や棚が乱れているのを見ると、つい手を止めて片付けたくなる" },
+    { dim: "sakana", scale: "tokui",    text: "今の入りを見て、このあと忙しくなりそうか予測するのが得意だ" },
+    { dim: "kan",    scale: "omou",     text: "誰かがミスをして落ち込んでいる時、まず「大丈夫だよ」と声をかけたくなる" },
+    { dim: "hin",    scale: "kininaru", text: "同じメニューなのに前回と味が違うと感じた時、妙に気になってしまう" },
+    { dim: "hyo",    scale: "ateha",    text: "悔しいことがあった日は、周りにもなんとなく伝わってしまう" },
+    { dim: "tori",   scale: "tokui",    text: "手が空いた時、どの持ち場が今一番大変か、店全体を見て判断するのが得意だ" },
+    { dim: "jitsu",  scale: "omou",     text: "役割が曖昧なまま任された仕事は、まず自分で区切りを決めてから動き出す" },
+    { dim: "setsu",  scale: "omou",     text: "後輩の挨拶や言葉遣いが雑だと、つい注意したくなる" },
+    { dim: "sei_e",  scale: "ateha",    text: "忙しい時ほど、周りからは落ち着いて見えると言われる" },
+    { dim: "mushi",  scale: "tokui",    text: "他のスタッフが見逃しがちな、細かい変化や乱れに気づきやすい" },
+    { dim: "sei_c",  scale: "kininaru", text: "テーブルの拭き残しなど、細かい汚れが目に入ると気になって仕方ない" },
+    { dim: "sakana", scale: "omou",     text: "発注や仕込みをする時、来週・来月の傾向まで考えてから動きたくなる" },
+    { dim: "kan",    scale: "omou",     text: "ギクシャクした空気のミーティングでは、つい間に入って場を和ませようとする" },
+    { dim: "hin",    scale: "omou",     text: "お客様に褒められるなら、「美味しかった」の一言が一番嬉しい" },
+    { dim: "hyo",    scale: "ateha",    text: "お店が忙しくなればなるほど、なぜかテンションが上がってくる" },
+    { dim: "tori",   scale: "omou",     text: "店全体の状況を把握して指示を出している人を見ると、素直にすごいと思う" },
+    { dim: "jitsu",  scale: "omou",     text: "話し合いが長引いている時、「とりあえずやってみよう」と言い出したくなる" },
+    { dim: "setsu",  scale: "omou",     text: "お客様に褒められるなら、「感じが良かった」の一言が一番嬉しい" },
+    { dim: "sei_e",  scale: "ateha",    text: "イライラすることがあっても、表情にはあまり出さない方だ" },
+    { dim: "mushi",  scale: "omou",     text: "お客様のささいな変化にすっと気づいて動ける人を見ると、素直にすごいと思う" },
+    { dim: "sei_c",  scale: "omou",     text: "お客様に褒められるなら、「清潔できれいなお店」の一言が一番嬉しい" },
+    { dim: "sakana", scale: "omou",     text: "忙しくなる前にさりげなく準備を終えている人を見ると、素直にすごいと思う" },
+
+    { dim: "kan",    scale: "omou",     text: "後輩同士がぎこちない空気の時、自分から間に入って会話のきっかけを作りたくなる" },
+    { dim: "jitsu",  scale: "omou",     text: "計画がまだ固まっていなくても、動きながら調整する方が性に合う" },
+    { dim: "hin",    scale: "omou",     text: "新しいメニューを試作する時、味が完成するまで何度でも作り直したくなる" },
+    { dim: "setsu",  scale: "omou",     text: "常連のお客様が来店したら、前回話した内容を覚えていて会話に活かしたくなる" },
+    { dim: "sei_c",  scale: "omou",     text: "自分の担当外の場所でも、汚れているのに気づいたらそのままにできない" },
+    { dim: "hyo",    scale: "ateha",    text: "お客様から直接お褒めの言葉をもらった時、その場で笑顔が抑えられない" },
+    { dim: "sei_e",  scale: "omou",     text: "予想外のクレームがあった直後は、まず頭の中で状況を整理してから対応したくなる" },
+    { dim: "tori",   scale: "omou",     text: "ピーク時間、誰かに指示を出すなら、まず店全体の流れを見てから決めたい" },
+    { dim: "mushi",  scale: "ateha",    text: "お客様のグラスの減り具合など、細かいところまでつい目が行ってしまう" },
+    { dim: "sakana", scale: "ateha",    text: "天気や曜日から、その日の混み具合をなんとなく予測してしまう" },
+
+    { dim: "kan",    scale: "omou",     text: "誰かに相談を持ちかけられたら、まずアドバイスより先に「大変だったね」と共感したくなる" },
+    { dim: "jitsu",  scale: "omou",     text: "「誰かがやるだろう」という空気になった時、自分から手を挙げて引き受けたくなる" },
+    { dim: "hin",    scale: "kininaru", text: "自分が作った料理が思い通りの出来でなかった時、営業中でも気になって仕方ない" },
+    { dim: "setsu",  scale: "omou",     text: "満席で忙しい時でも、一人ひとりへの声かけを省略したくない" },
+    { dim: "sei_c",  scale: "omou",     text: "閉店後の片付けでは、次の日の準備まで含めて整えておきたくなる" },
+    { dim: "hyo",    scale: "ateha",    text: "自分のミスに気づいた瞬間、顔や声にすぐ出てしまう" },
+    { dim: "sei_e",  scale: "omou",     text: "感情的になりそうな場面ほど、あえて一呼吸置いてから話すようにしている" },
+    { dim: "tori",   scale: "omou",     text: "新しいレイアウトやオペレーションを考える時、店全体の動線から考えたくなる" },
+    { dim: "mushi",  scale: "omou",     text: "一つのテーブルに集中している時、他のことより目の前の対応を優先したくなる" },
+    { dim: "sakana", scale: "omou",     text: "新人が入る前から、教え方やスケジュールを先回りして考えたくなる" },
+
+    { dim: "kan",    scale: "omou",     text: "朝一番にスタッフへ元気よく挨拶できると、その日一日が良い雰囲気になる気がする" },
+    { dim: "kan",    scale: "omou",     text: "後輩が落ち込んでいる日は、仕事の話より先に体調や気分を気にかけたくなる" },
+    { dim: "kan",    scale: "omou",     text: "誰かの頑張りに気づいたら、ちょっとしたことでも声に出して伝えたくなる" },
+    { dim: "jitsu",  scale: "ateha",    text: "忙しい最中に細かい指示を挟まれると、正直少しイラッとしてしまう" },
+    { dim: "jitsu",  scale: "omou",     text: "作業の途中で予定が変わっても、まず目の前のタスクを終わらせてから切り替えたい" },
+    { dim: "jitsu",  scale: "omou",     text: "同じことを何度も確認されるより、任されて自分のペースで進めたい" },
+
+    { dim: "kyoso",  scale: "omou",     text: "同期や後輩の方が早く仕事を覚えていると知ると、負けたくないという気持ちが湧いてくる" },
+    { dim: "kyocho", scale: "omou",     text: "他人と比べるより、昨日の自分より成長できているかを大事にしたい" },
+    { dim: "kyoso",  scale: "ateha",    text: "ランキングや評価で自分の順位が分かると、俄然やる気が出るタイプだ" },
+    { dim: "kyocho", scale: "omou",     text: "周りのペースに合わせず、自分に合ったペースで着実に成長したい" },
+    { dim: "kyoso",  scale: "omou",     text: "誰かに「あなたには敵わない」と言われると、素直に嬉しくなる" },
+    { dim: "kyocho", scale: "omou",     text: "誰かと競うより、みんなで一緒に上達していく方が心地よい" },
+    { dim: "kyoso",  scale: "omou",     text: "目標を立てる時、周りより上を目指す方がやる気が出る" },
+    { dim: "kyocho", scale: "omou",     text: "自分のできなかったことができるようになる瞬間が、一番のやりがいだ" },
+    { dim: "kyoso",  scale: "omou",     text: "自分より仕事ができる人が近くにいると、自然と対抗意識が湧いてくる" },
+    { dim: "kyocho", scale: "omou",     text: "順位やランキングより、自分なりの目標を達成することにやる意義を感じる" },
+
+    { dim: "hin",    scale: "omou",     text: "新人が仕込んだ料理の味が基準に届いていないと感じたら、自分の作業を止めてでも確認したくなる" },
+    { dim: "setsu",  scale: "omou",     text: "お客様が居心地悪そうにしていたら、たとえ担当外でも声をかけたくなる" },
+    { dim: "sei_c",  scale: "omou",     text: "営業終了後、明日出勤する人のことを考えて厨房やホールを整えておきたくなる" },
+    { dim: "hin",    scale: "ateha",    text: "お客様に出す直前、一皿一皿の見た目を無意識にチェックしてしまう" },
+    { dim: "setsu",  scale: "omou",     text: "混雑時こそ、笑顔や声のトーンを意識して崩さないようにしている" },
+    { dim: "sei_c",  scale: "omou",     text: "自分が使った道具は、次に使う人のことを考えてきれいに戻したくなる" },
+    { dim: "hin",    scale: "omou",     text: "レシピ通りに作っても、自分の感覚で微調整を加えたくなる" },
+    { dim: "setsu",  scale: "omou",     text: "お客様から名前を覚えられていたと知ると、次からもっと気を配りたくなる" },
+    { dim: "sei_c",  scale: "kininaru", text: "店の匂いや空気の淀みなど、目に見えない部分の清潔感も気になる" }
+  ];
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  var STATEMENTS = STATEMENTS_MASTER; // 診断開始時にシャッフルした配列に差し替える
+  var current = 0;
+  var answers = new Array(STATEMENTS.length).fill(null);
+  var respondentName = "";
+
+  var screenIntro = document.getElementById("screen-intro");
+  var screenQuiz = document.getElementById("screen-quiz");
+  var screenVitality = document.getElementById("screen-vitality");
+  var screenDone = document.getElementById("screen-done");
+  var vitalityScore = 50;
+
+  var vitalitySlider = document.getElementById("vitality-slider");
+  vitalitySlider.addEventListener("input", function () {
+    vitalityScore = parseInt(vitalitySlider.value, 10);
+    document.getElementById("vitality-value").textContent = vitalityScore;
+  });
+  document.getElementById("btn-vitality-next").addEventListener("click", function () {
+    finish();
+  });
+
+  document.getElementById("btn-start").addEventListener("click", function () {
+    respondentName = document.getElementById("name-input").value.trim() || "匿名";
+    STATEMENTS = shuffle(STATEMENTS_MASTER.slice());
+    current = 0;
+    answers = new Array(STATEMENTS.length).fill(null);
+    screenIntro.hidden = true;
+    screenQuiz.hidden = false;
+    renderQuestion();
+  });
+
+  document.getElementById("btn-back").addEventListener("click", function () {
+    if (current > 0) { current -= 1; renderQuestion(); }
+  });
+
+  function renderQuestion() {
+    var q = STATEMENTS[current];
+    document.getElementById("q-counter").textContent = (current + 1) + " / " + STATEMENTS.length;
+    document.getElementById("progress-fill").style.width = ((current / STATEMENTS.length) * 100) + "%";
+    document.getElementById("q-text").textContent = q.text;
+    document.getElementById("btn-back").disabled = current === 0;
+    var labels = SCALE_LABELS[q.scale] || SCALE_LABELS.ateha;
+    document.getElementById("scale-label-left").textContent = labels[0];
+    document.getElementById("scale-label-right").textContent = labels[1];
+
+    var row = document.getElementById("scale-row");
+    row.innerHTML = "";
+    for (var v = 1; v <= 5; v++) {
+      (function (val) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "scale-btn";
+        btn.textContent = val;
+        btn.addEventListener("click", function () {
+          answers[current] = val;
+          if (current < STATEMENTS.length - 1) {
+            current += 1;
+            renderQuestion();
+          } else {
+            screenQuiz.hidden = true;
+            screenVitality.hidden = false;
+          }
+        });
+        row.appendChild(btn);
+      })(v);
+    }
+  }
+
+  function finish() {
+    screenVitality.hidden = true;
+    screenDone.hidden = false;
+
+    var sums = {}, counts = {};
+    DIM_ORDER.forEach(function (d) { sums[d] = 0; counts[d] = 0; });
+    STATEMENTS.forEach(function (q, i) {
+      var v = answers[i] || 3;
+      sums[q.dim] += v;
+      counts[q.dim] += 1;
+    });
+
+    var digits = DIM_ORDER.map(function (d) {
+      var avg = sums[d] / counts[d]; // 1.0 - 5.0
+      var scaled = Math.round(avg * 10); // 10 - 50
+      return String(scaled).padStart(2, "0");
+    }).join("");
+
+    // 店の活気（個人の気質とは別枠の1問）を3桁で末尾に付与
+    digits += String(vitalityScore).padStart(3, "0");
+
+    var safeName = respondentName.replace(/[|_\s]/g, "");
+    var code = safeName + "_" + digits;
+
+    document.getElementById("code-box").textContent = code;
+
+    document.getElementById("btn-copy").addEventListener("click", function () {
+      var feedback = document.getElementById("copy-feedback");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function () {
+          feedback.textContent = "コピーしました";
+          setTimeout(function () { feedback.textContent = ""; }, 2000);
+        }).catch(function () { feedback.textContent = code; });
+      } else {
+        feedback.textContent = code;
+      }
+    });
+  }
+})();
+</script>
