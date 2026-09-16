@@ -177,9 +177,6 @@
 
 <script>
 (function () {
-  // dim order fixed for the code: 関 実 品 接 清 表 省 鳥 虫 魚 競 協
-  var DIM_ORDER = ["kan", "jitsu", "hin", "setsu", "sei_c", "hyo", "sei_e", "tori", "mushi", "sakana", "kyoso", "kyocho"];
-
   // scale types: どの言い回しの設問かによって、5段階の両端ラベルを変える
   var SCALE_LABELS = {
     omou:      ["全くそう思わない", "とてもそう思う"],
@@ -270,6 +267,7 @@
     { dim: "setsu",  scale: "omou",     text: "お客様から名前を覚えられていたと知ると、次からもっと気を配りたくなる" },
     { dim: "sei_c",  scale: "kininaru", text: "店の匂いや空気の淀みなど、目に見えない部分の清潔感も気になる" }
   ];
+  STATEMENTS_MASTER.forEach(function (s, i) { s.id = i; }); // シャッフルしても回答をどの設問のものか追跡できるよう固定IDを振る
 
   function shuffle(arr) {
     for (var i = arr.length - 1; i > 0; i--) {
@@ -350,19 +348,13 @@
     screenVitality.hidden = true;
     screenDone.hidden = false;
 
-    var sums = {}, counts = {};
-    DIM_ORDER.forEach(function (d) { sums[d] = 0; counts[d] = 0; });
+    // 各設問の生の回答を、固定ID順（シャッフルの影響を受けない）に1桁ずつ並べる
+    // → 管理者側で「どの設問にどう答えたか」の内訳を後から再現できるようにする
+    var rawByID = new Array(STATEMENTS_MASTER.length).fill(3);
     STATEMENTS.forEach(function (q, i) {
-      var v = answers[i] || 3;
-      sums[q.dim] += v;
-      counts[q.dim] += 1;
+      rawByID[q.id] = answers[i] || 3;
     });
-
-    var digits = DIM_ORDER.map(function (d) {
-      var avg = sums[d] / counts[d]; // 1.0 - 5.0
-      var scaled = Math.round(avg * 10); // 10 - 50
-      return String(scaled).padStart(2, "0");
-    }).join("");
+    var digits = rawByID.join("");
 
     // 店の活気（個人の気質とは別枠の1問）を3桁で末尾に付与
     digits += String(vitalityScore).padStart(3, "0");
