@@ -195,14 +195,9 @@
 
 <script>
 (function () {
-  // scale types: どの言い回しの設問かによって、5段階の両端ラベルを変える
-  var SCALE_LABELS = {
-    omou:      ["全くそう思わない", "とてもそう思う"],
-    kininaru:  ["全く気にならない", "とても気になる"],
-    tokui:     ["全く得意ではない", "とても得意"],
-    ateha:     ["全く当てはまらない", "とても当てはまる"],
-    manzoku:   ["全く満足していない", "とても満足している"]
-  };
+  // 5段階の両端ラベルは全設問共通（「とても」等の強調表現は使わない）
+  var SCALE_LABEL_LEFT = "そう思わない";
+  var SCALE_LABEL_RIGHT = "そう思う";
 
   // 「良い/悪い」の気質診断とは別枠で行う、従業員満足度（ES）アンケート。4問固定・シャッフルしない。
   // 雇用形態（社員／アルバイト）とセットで管理者側に渡し、平均を分けて見られるようにする。
@@ -374,9 +369,8 @@
     document.getElementById("progress-fill").style.width = ((current / STATEMENTS.length) * 100) + "%";
     document.getElementById("q-text").textContent = q.text;
     document.getElementById("btn-back").disabled = current === 0;
-    var labels = SCALE_LABELS[q.scale] || SCALE_LABELS.ateha;
-    document.getElementById("scale-label-left").textContent = labels[0];
-    document.getElementById("scale-label-right").textContent = labels[1];
+    document.getElementById("scale-label-left").textContent = SCALE_LABEL_LEFT;
+    document.getElementById("scale-label-right").textContent = SCALE_LABEL_RIGHT;
 
     var row = document.getElementById("scale-row");
     row.innerHTML = "";
