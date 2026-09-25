@@ -48,6 +48,17 @@
     color: var(--ink); font-size: 15px; font-family: inherit;
   }
   .name-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .employment-field { display: flex; flex-direction: column; gap: 8px; }
+  .employment-field > label { font-size: 13px; color: var(--ink-secondary); }
+  .employment-toggle { display: flex; gap: 10px; }
+  .toggle-btn {
+    flex: 1; padding: 12px 10px; border-radius: 10px; border: 1.5px solid var(--border-strong);
+    background: var(--surface); color: var(--ink-secondary); font-family: inherit; font-size: 14px;
+    font-weight: 700; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .toggle-btn:hover { border-color: var(--accent); }
+  .toggle-btn.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .employment-error { font-size: 12px; color: var(--accent2); margin: 0; }
   .btn-primary {
     align-self: flex-start; background: var(--accent); color: var(--accent-ink);
     border: none; padding: 15px 34px; border-radius: 999px; font-size: 15px;
@@ -136,6 +147,14 @@
       <label for="name-input">お名前（任意）</label>
       <input type="text" id="name-input" class="name-input" placeholder="例：山田太郎">
     </div>
+    <div class="employment-field">
+      <label>雇用形態（必須）</label>
+      <div class="employment-toggle">
+        <button type="button" class="toggle-btn" id="btn-emp-staff" data-value="1">社員</button>
+        <button type="button" class="toggle-btn" id="btn-emp-parttime" data-value="2">アルバイト</button>
+      </div>
+      <p class="employment-error" id="employment-error" hidden>雇用形態を選択してください</p>
+    </div>
     <button class="btn-primary" id="btn-start">診断をはじめる</button>
     <p class="meta-note">※診断結果はこの画面には表示されません。回答後に出るコードを、担当の方にお渡しください。</p>
   </div>
@@ -156,24 +175,6 @@
     <div class="quiz-nav">
       <button class="btn-ghost" id="btn-back">← 前の質問に戻る</button>
       <span></span>
-    </div>
-  </div>
-
-  <!-- ===== VITALITY (店の活気について、個人の気質とは別枠) ===== -->
-  <div class="quiz" id="screen-vitality" hidden>
-    <div class="progress-head">
-      <div class="progress-top-row"><span class="q-counter">最後にもう一つ</span></div>
-      <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
-    </div>
-    <div class="q-card">
-      <h2>今のお店の活気（元気さ・盛り上がり）は、100点満点中何点くらいだと思いますか？</h2>
-      <div class="vitality-value" id="vitality-value">50</div>
-      <input type="range" min="0" max="100" step="5" value="50" class="vitality-slider" id="vitality-slider">
-      <div class="scale-labels"><span>元気がない</span><span>とても活気がある</span></div>
-    </div>
-    <div class="quiz-nav">
-      <span></span>
-      <button class="btn-primary" id="btn-vitality-next" style="padding:11px 26px;font-size:14px">回答を終える</button>
     </div>
   </div>
 
@@ -199,8 +200,18 @@
     omou:      ["全くそう思わない", "とてもそう思う"],
     kininaru:  ["全く気にならない", "とても気になる"],
     tokui:     ["全く得意ではない", "とても得意"],
-    ateha:     ["全く当てはまらない", "とても当てはまる"]
+    ateha:     ["全く当てはまらない", "とても当てはまる"],
+    manzoku:   ["全く満足していない", "とても満足している"]
   };
+
+  // 「良い/悪い」の気質診断とは別枠で行う、従業員満足度（ES）アンケート。4問固定・シャッフルしない。
+  // 雇用形態（社員／アルバイト）とセットで管理者側に渡し、平均を分けて見られるようにする。
+  var ES_STATEMENTS = [
+    { key: "human", scale: "manzoku", text: "今の職場の人間関係（上司・同僚との関係）に満足している" },
+    { key: "work",  scale: "manzoku", text: "任されている仕事の内容ややりがいに満足している" },
+    { key: "cond",  scale: "manzoku", text: "今の勤務条件（シフト・休憩・労働時間など）に満足している" },
+    { key: "stay",  scale: "omou",    text: "これからもこの店で働き続けたいと思う" }
+  ];
 
   // 回答者本人に見せる「キャラクター診断」。一番スコアの高かった項目1つだけで決まる、遊び要素。
   // 裏側の12項目の名前とは紐づけて見せない（動物名だけを見せることで、測定内容を悟らせない）。
@@ -315,24 +326,32 @@
   var current = 0;
   var answers = new Array(STATEMENTS.length).fill(null);
   var respondentName = "";
+  var employmentType = null; // "1"=社員, "2"=アルバイト
+  var phase = "main"; // "main"（75問） → "es"（満足度4問）
+  var rawByID = null; // mainフェーズ終了時に、固定ID順の生回答として確定する
 
   var screenIntro = document.getElementById("screen-intro");
   var screenQuiz = document.getElementById("screen-quiz");
-  var screenVitality = document.getElementById("screen-vitality");
   var screenDone = document.getElementById("screen-done");
-  var vitalityScore = 50;
 
-  var vitalitySlider = document.getElementById("vitality-slider");
-  vitalitySlider.addEventListener("input", function () {
-    vitalityScore = parseInt(vitalitySlider.value, 10);
-    document.getElementById("vitality-value").textContent = vitalityScore;
-  });
-  document.getElementById("btn-vitality-next").addEventListener("click", function () {
-    finish();
-  });
+  function selectEmployment(value, btn, otherBtn) {
+    employmentType = value;
+    btn.classList.add("selected");
+    otherBtn.classList.remove("selected");
+    document.getElementById("employment-error").hidden = true;
+  }
+  var btnEmpStaff = document.getElementById("btn-emp-staff");
+  var btnEmpPart = document.getElementById("btn-emp-parttime");
+  btnEmpStaff.addEventListener("click", function () { selectEmployment("1", btnEmpStaff, btnEmpPart); });
+  btnEmpPart.addEventListener("click", function () { selectEmployment("2", btnEmpPart, btnEmpStaff); });
 
   document.getElementById("btn-start").addEventListener("click", function () {
+    if (!employmentType) {
+      document.getElementById("employment-error").hidden = false;
+      return;
+    }
     respondentName = document.getElementById("name-input").value.trim() || "匿名";
+    phase = "main";
     STATEMENTS = shuffle(STATEMENTS_MASTER.slice());
     current = 0;
     answers = new Array(STATEMENTS.length).fill(null);
@@ -347,7 +366,11 @@
 
   function renderQuestion() {
     var q = STATEMENTS[current];
-    document.getElementById("q-counter").textContent = (current + 1) + " / " + STATEMENTS.length;
+    if (phase === "main") {
+      document.getElementById("q-counter").textContent = (current + 1) + " / " + STATEMENTS.length;
+    } else {
+      document.getElementById("q-counter").textContent = "働きやすさについて " + (current + 1) + " / " + STATEMENTS.length;
+    }
     document.getElementById("progress-fill").style.width = ((current / STATEMENTS.length) * 100) + "%";
     document.getElementById("q-text").textContent = q.text;
     document.getElementById("btn-back").disabled = current === 0;
@@ -368,9 +391,19 @@
           if (current < STATEMENTS.length - 1) {
             current += 1;
             renderQuestion();
+          } else if (phase === "main") {
+            // 全75問終了 → 生回答をID順（シャッフル前の順）に確定してから、満足度アンケートへ進む
+            rawByID = new Array(STATEMENTS_MASTER.length).fill(3);
+            STATEMENTS.forEach(function (qq, i) { rawByID[qq.id] = answers[i] || 3; });
+            phase = "es";
+            STATEMENTS = ES_STATEMENTS;
+            current = 0;
+            answers = new Array(STATEMENTS.length).fill(null);
+            renderQuestion();
           } else {
             screenQuiz.hidden = true;
-            screenVitality.hidden = false;
+            screenDone.hidden = false;
+            finish(answers.slice());
           }
         });
         row.appendChild(btn);
@@ -378,17 +411,7 @@
     }
   }
 
-  function finish() {
-    screenVitality.hidden = true;
-    screenDone.hidden = false;
-
-    // 各設問の生の回答を、固定ID順（シャッフルの影響を受けない）に1桁ずつ並べる
-    // → 管理者側で「どの設問にどう答えたか」の内訳を後から再現できるようにする
-    var rawByID = new Array(STATEMENTS_MASTER.length).fill(3);
-    STATEMENTS.forEach(function (q, i) {
-      rawByID[q.id] = answers[i] || 3;
-    });
-
+  function finish(esAnswers) {
     // 回答者本人向けのキャラクター判定（一番スコアの高かった項目1つだけで決める、遊び要素）
     var sums = {}, counts = {};
     STATEMENTS_MASTER.forEach(function (s, i) {
@@ -406,10 +429,11 @@
       '<p class="char-kicker">あなたのタイプは</p>' +
       '<h2 class="char-name">' + character.name + '</h2>' +
       '<p class="char-desc">' + character.desc + '</p>';
-    var digits = rawByID.join("");
 
-    // 店の活気（個人の気質とは別枠の1問）を3桁で末尾に付与
-    digits += String(vitalityScore).padStart(3, "0");
+    // 生の回答（75桁）＋雇用形態（1桁）＋満足度アンケートの生回答（4桁）を並べてコード化する
+    var digits = rawByID.join("");
+    digits += employmentType;
+    digits += esAnswers.map(function (v) { return v || 3; }).join("");
 
     var safeName = respondentName.replace(/[|_\s]/g, "");
     var code = safeName + "_" + digits;
