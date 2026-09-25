@@ -95,9 +95,23 @@
   .btn-ghost:hover { color: var(--ink); }
   .btn-ghost:disabled { opacity: 0.35; cursor: default; }
 
-  .done { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; text-align: center; }
-  .done h1 { font-size: clamp(1.6rem, 6vw, 2rem); font-weight: 800; }
+  .done { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 28px; text-align: center; }
   .done p { color: var(--ink-secondary); font-size: 14.5px; max-width: 42ch; }
+
+  .char-card {
+    background: var(--surface); border: 2px solid var(--accent); border-radius: 20px;
+    padding: 32px 26px; width: 100%; max-width: 380px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .char-emoji { font-size: 3rem; line-height: 1; }
+  .char-kicker { font-size: 12px; color: var(--ink-muted); letter-spacing: 0.08em; margin-top: 4px; }
+  .char-name { font-family: "Shippori Mincho", serif; font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+  .char-desc { font-size: 13.5px; color: var(--ink-secondary); line-height: 1.8; margin-top: 4px; }
+
+  .handoff {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding-top: 20px; border-top: 1px solid var(--border-strong); width: 100%; max-width: 380px;
+  }
   .code-box {
     background: var(--surface); border: 1.5px dashed var(--border-strong); border-radius: 14px;
     padding: 18px 20px; font-family: "Shippori Mincho", serif; font-size: 15px; letter-spacing: 0.04em;
@@ -165,12 +179,14 @@
   <!-- ===== DONE ===== -->
   <div class="done" id="screen-done" hidden>
     <span class="eyebrow">回答ありがとうございました</span>
-    <h1>診断が完了しました</h1>
-    <p>下のコードを、担当の方に送ってください。コード自体に意味はわかりませんが、
-    担当の方が専用ツールで結果を確認します。</p>
-    <div class="code-box" id="code-box"></div>
-    <button class="btn-primary" id="btn-copy">コードをコピーする</button>
-    <p class="copy-feedback" id="copy-feedback"></p>
+    <div class="char-card" id="char-card"></div>
+    <div class="handoff">
+      <p class="handoff-note">下のコードを、担当の方に送ってください。コード自体に意味はわかりませんが、
+      担当の方が専用ツールで結果を確認します。</p>
+      <div class="code-box" id="code-box"></div>
+      <button class="btn-primary" id="btn-copy">コードをコピーする</button>
+      <p class="copy-feedback" id="copy-feedback"></p>
+    </div>
   </div>
 
 </div>
@@ -183,6 +199,23 @@
     kininaru:  ["全く気にならない", "とても気になる"],
     tokui:     ["全く得意ではない", "とても得意"],
     ateha:     ["全く当てはまらない", "とても当てはまる"]
+  };
+
+  // 回答者本人に見せる「キャラクター診断」。一番スコアの高かった項目1つだけで決まる、遊び要素。
+  // 裏側の12項目の名前とは紐づけて見せない（動物名だけを見せることで、測定内容を悟らせない）。
+  var CHARACTERS = {
+    kan:    { emoji: "🐬", name: "絆のイルカ", desc: "仲間との信頼を、なにより大切にするタイプ。困っている人を見つけると自然と駆け寄り、場の空気を和ませる力があります。あなたがいるだけで、チームの雰囲気がやわらかくなります。" },
+    jitsu:  { emoji: "🐗", name: "直進のイノシシ", desc: "「迷ったらまず動く」を体現するタイプ。決めたことは脇目もふらずやり遂げる実行力があります。周りが議論している間に、気づけばもう一歩前に進んでいるタイプです。" },
+    hin:    { emoji: "🐱", name: "こだわりのネコ", desc: "味や見た目の、ほんの小さなズレも見逃さない繊細な感覚の持ち主。自分が納得できるまで手を抜かない、職人気質なタイプです。" },
+    setsu:  { emoji: "🐶", name: "もてなしのイヌ", desc: "お客様の小さな変化にすぐ気づき、自然と声をかけられる人懐っこいタイプ。あなたに接客してもらったお客様は、きっとまた会いたくなります。" },
+    sei_c:  { emoji: "🐝", name: "働き者のミツバチ", desc: "整った環境を作ることに、静かなやりがいを感じるタイプ。誰も見ていないところでコツコツ整えるその姿勢が、実はお店を支えています。" },
+    hyo:    { emoji: "🦚", name: "表現者のクジャク", desc: "感じたことがそのまま表に出る、感情豊かなタイプ。あなたの喜びや元気は周りにも伝染して、お店の空気を明るくします。" },
+    sei_e:  { emoji: "🦉", name: "静観のフクロウ", desc: "どんな時も慌てず、まず状況を見極めてから動く冷静なタイプ。あなたが落ち着いているだけで、周りも安心できます。" },
+    tori:   { emoji: "🦅", name: "俯瞰のワシ", desc: "高いところから全体を見渡すように、店全体の流れやバランスを自然と把握できるタイプ。困った時、みんなが頼りにする存在です。" },
+    mushi:  { emoji: "🐜", name: "気づきのアリ", desc: "誰も気づかないような小さな変化を、真っ先に見つけられるタイプ。その観察力の細やかさが、お客様への気配りに直結しています。" },
+    sakana: { emoji: "🐟", name: "先読みのマグロ", desc: "止まらず泳ぎ続けるマグロのように、常に一歩先を読んで動くタイプ。忙しくなる前にすでに準備が整っている、頼れる存在です。" },
+    kyoso:  { emoji: "🐯", name: "闘志のトラ", desc: "負けず嫌いで、目標に向かって力を発揮するタイプ。ライバルがいるほど燃えるので、良き競争相手がいる環境で一番輝きます。" },
+    kyocho: { emoji: "🐧", name: "歩幅のペンギン", desc: "周りと比べるより、自分のペースで着実に前に進むタイプ。仲間と息を合わせて協力する時に、一番の力を発揮します。" }
   };
 
   var STATEMENTS_MASTER = [
@@ -354,6 +387,24 @@
     STATEMENTS.forEach(function (q, i) {
       rawByID[q.id] = answers[i] || 3;
     });
+
+    // 回答者本人向けのキャラクター判定（一番スコアの高かった項目1つだけで決める、遊び要素）
+    var sums = {}, counts = {};
+    STATEMENTS_MASTER.forEach(function (s, i) {
+      sums[s.dim] = (sums[s.dim] || 0) + rawByID[i];
+      counts[s.dim] = (counts[s.dim] || 0) + 1;
+    });
+    var topDim = null, topAvg = -1;
+    Object.keys(sums).forEach(function (d) {
+      var avg = sums[d] / counts[d];
+      if (avg > topAvg) { topAvg = avg; topDim = d; }
+    });
+    var character = CHARACTERS[topDim];
+    document.getElementById("char-card").innerHTML =
+      '<div class="char-emoji">' + character.emoji + '</div>' +
+      '<p class="char-kicker">あなたのタイプは</p>' +
+      '<h2 class="char-name">' + character.name + '</h2>' +
+      '<p class="char-desc">' + character.desc + '</p>';
     var digits = rawByID.join("");
 
     // 店の活気（個人の気質とは別枠の1問）を3桁で末尾に付与
