@@ -178,6 +178,24 @@
     </div>
   </div>
 
+  <!-- ===== VITALITY (社員のみ・店の活気について、個人の気質とは別枠) ===== -->
+  <div class="quiz" id="screen-vitality" hidden>
+    <div class="progress-head">
+      <div class="progress-top-row"><span class="q-counter">最後にもう少し</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+    </div>
+    <div class="q-card">
+      <h2>今のお店の活気（元気さ・盛り上がり）は、100点満点中何点くらいだと思いますか？</h2>
+      <div class="vitality-value" id="vitality-value">50</div>
+      <input type="range" min="0" max="100" step="5" value="50" class="vitality-slider" id="vitality-slider">
+      <div class="scale-labels"><span>元気がない</span><span>とても活気がある</span></div>
+    </div>
+    <div class="quiz-nav">
+      <span></span>
+      <button class="btn-primary" id="btn-vitality-next" style="padding:11px 26px;font-size:14px">次へ</button>
+    </div>
+  </div>
+
   <!-- ===== DONE ===== -->
   <div class="done" id="screen-done" hidden>
     <span class="eyebrow">回答ありがとうございました</span>
@@ -199,20 +217,10 @@
   var SCALE_LABEL_LEFT = "そう思わない";
   var SCALE_LABEL_RIGHT = "そう思う";
 
-  // 「良い/悪い」の気質診断とは別枠で行う、従業員満足度（ES）アンケート。4問固定・シャッフルしない。
-  // 雇用形態（社員／アルバイト）によって4問すべての内容を総入れ替えする（共通項目はなし）。
-  var ES_STATEMENTS_STAFF = [
-    { key: "human",  scale: "manzoku", text: "今の職場の人間関係（上司・同僚との関係）に満足している" },
-    { key: "work",   scale: "manzoku", text: "任されている仕事の裁量や責任の大きさに満足している" },
-    { key: "growth", scale: "manzoku", text: "今の評価のされ方や、キャリア成長の機会に満足している" },
-    { key: "vision", scale: "omou",    text: "会社の今後の方針やビジョンに共感できている" }
-  ];
-  var ES_STATEMENTS_PARTTIME = [
-    { key: "human",      scale: "manzoku", text: "今の職場の人間関係（先輩・社員との関係）に満足している" },
-    { key: "shift",      scale: "manzoku", text: "シフトの融通や、働く時間帯の希望の通りやすさに満足している" },
-    { key: "support",    scale: "manzoku", text: "分からないことを気軽に聞ける、教えてもらえる環境だと感じている" },
-    { key: "recreation", scale: "omou",    text: "職場のレクリエーションや親睦イベントなどがあれば、参加してみたいと思う" }
-  ];
+  // 「良い/悪い」の気質診断とは別枠で行う、従業員満足度（ES）関連の質問。
+  // 社員：店の活気（スライダー）＋キャリア成長の質問。アルバイト：レクリエーション参加意欲の質問のみ。
+  var ES_GROWTH_Q = { key: "growth", text: "今の評価のされ方や、キャリア成長の機会に満足している" };
+  var ES_RECREATION_Q = { key: "recreation", text: "職場のレクリエーションや親睦イベントなどがあれば、参加してみたいと思う" };
 
   // 回答者本人に見せる「キャラクター診断」。一番スコアの高かった項目1つだけで決まる、遊び要素。
   // 裏側の12項目の名前とは紐づけて見せない（動物名だけを見せることで、測定内容を悟らせない）。
@@ -328,12 +336,29 @@
   var answers = new Array(STATEMENTS.length).fill(null);
   var respondentName = "";
   var employmentType = null; // "1"=社員, "2"=アルバイト
-  var phase = "main"; // "main"（75問） → "es"（満足度4問）
+  var phase = "main"; // "main"（75問） → （社員のみ）"vitality" → "es"（最後の1問） → 完了
   var rawByID = null; // mainフェーズ終了時に、固定ID順の生回答として確定する
+  var vitalityScore = 50; // 社員のみ使用（店の活気）
 
   var screenIntro = document.getElementById("screen-intro");
   var screenQuiz = document.getElementById("screen-quiz");
+  var screenVitality = document.getElementById("screen-vitality");
   var screenDone = document.getElementById("screen-done");
+
+  var vitalitySlider = document.getElementById("vitality-slider");
+  vitalitySlider.addEventListener("input", function () {
+    vitalityScore = parseInt(vitalitySlider.value, 10);
+    document.getElementById("vitality-value").textContent = vitalityScore;
+  });
+  document.getElementById("btn-vitality-next").addEventListener("click", function () {
+    phase = "es";
+    STATEMENTS = [ES_GROWTH_Q];
+    current = 0;
+    answers = new Array(STATEMENTS.length).fill(null);
+    screenVitality.hidden = true;
+    screenQuiz.hidden = false;
+    renderQuestion();
+  });
 
   function selectEmployment(value, btn, otherBtn) {
     employmentType = value;
@@ -370,7 +395,7 @@
     if (phase === "main") {
       document.getElementById("q-counter").textContent = (current + 1) + " / " + STATEMENTS.length;
     } else {
-      document.getElementById("q-counter").textContent = "働きやすさについて " + (current + 1) + " / " + STATEMENTS.length;
+      document.getElementById("q-counter").textContent = "最後にもう一問";
     }
     document.getElementById("progress-fill").style.width = ((current / STATEMENTS.length) * 100) + "%";
     document.getElementById("q-text").textContent = q.text;
@@ -392,18 +417,26 @@
             current += 1;
             renderQuestion();
           } else if (phase === "main") {
-            // 全75問終了 → 生回答をID順（シャッフル前の順）に確定してから、満足度アンケートへ進む
+            // 全75問終了 → 生回答をID順（シャッフル前の順）に確定してから、次の設問へ
             rawByID = new Array(STATEMENTS_MASTER.length).fill(3);
             STATEMENTS.forEach(function (qq, i) { rawByID[qq.id] = answers[i] || 3; });
-            phase = "es";
-            STATEMENTS = employmentType === "1" ? ES_STATEMENTS_STAFF : ES_STATEMENTS_PARTTIME;
-            current = 0;
-            answers = new Array(STATEMENTS.length).fill(null);
-            renderQuestion();
+            if (employmentType === "1") {
+              // 社員：店の活気（スライダー）→ キャリア成長の設問、の順で進む
+              phase = "vitality";
+              screenQuiz.hidden = true;
+              screenVitality.hidden = false;
+            } else {
+              // アルバイト：レクリエーション参加意欲の1問のみ
+              phase = "es";
+              STATEMENTS = [ES_RECREATION_Q];
+              current = 0;
+              answers = new Array(STATEMENTS.length).fill(null);
+              renderQuestion();
+            }
           } else {
             screenQuiz.hidden = true;
             screenDone.hidden = false;
-            finish(answers.slice());
+            finish(answers[0]);
           }
         });
         row.appendChild(btn);
@@ -411,7 +444,7 @@
     }
   }
 
-  function finish(esAnswers) {
+  function finish(esValue) {
     // 回答者本人向けのキャラクター判定（一番スコアの高かった項目1つだけで決める、遊び要素）
     var sums = {}, counts = {};
     STATEMENTS_MASTER.forEach(function (s, i) {
@@ -430,10 +463,20 @@
       '<h2 class="char-name">' + character.name + '</h2>' +
       '<p class="char-desc">' + character.desc + '</p>';
 
-    // 生の回答（75桁）＋雇用形態（1桁）＋満足度アンケートの生回答（4桁）を並べてコード化する
+    // 生の回答（75桁）＋雇用形態（1桁）＋活気3桁＋成長設問1桁＋レクリエーション設問1桁で固定81桁にする。
+    // 雇用形態によって使わない項目は0埋め（社員なら活気3桁+成長1桁を使い、レクリエーション桁は"0"。
+    // アルバイトならレクリエーション桁だけを使い、活気3桁と成長1桁は"000"/"0"にする）
     var digits = rawByID.join("");
     digits += employmentType;
-    digits += esAnswers.map(function (v) { return v || 3; }).join("");
+    if (employmentType === "1") {
+      digits += String(vitalityScore).padStart(3, "0");
+      digits += String(esValue || 3);
+      digits += "0";
+    } else {
+      digits += "000";
+      digits += "0";
+      digits += String(esValue || 3);
+    }
 
     var safeName = respondentName.replace(/[|_\s]/g, "");
     var code = safeName + "_" + digits;
