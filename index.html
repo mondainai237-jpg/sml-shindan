@@ -200,12 +200,18 @@
   var SCALE_LABEL_RIGHT = "そう思う";
 
   // 「良い/悪い」の気質診断とは別枠で行う、従業員満足度（ES）アンケート。4問固定・シャッフルしない。
-  // 雇用形態（社員／アルバイト）とセットで管理者側に渡し、平均を分けて見られるようにする。
-  var ES_STATEMENTS = [
-    { key: "human", scale: "manzoku", text: "今の職場の人間関係（上司・同僚との関係）に満足している" },
-    { key: "work",  scale: "manzoku", text: "任されている仕事の内容ややりがいに満足している" },
-    { key: "cond",  scale: "manzoku", text: "今の勤務条件（シフト・休憩・労働時間など）に満足している" },
-    { key: "recreation", scale: "omou", text: "職場のレクリエーションや親睦イベントなどがあれば、参加してみたいと思う" }
+  // 雇用形態（社員／アルバイト）によって4問すべての内容を総入れ替えする（共通項目はなし）。
+  var ES_STATEMENTS_STAFF = [
+    { key: "human",  scale: "manzoku", text: "今の職場の人間関係（上司・同僚との関係）に満足している" },
+    { key: "work",   scale: "manzoku", text: "任されている仕事の裁量や責任の大きさに満足している" },
+    { key: "growth", scale: "manzoku", text: "今の評価のされ方や、キャリア成長の機会に満足している" },
+    { key: "vision", scale: "omou",    text: "会社の今後の方針やビジョンに共感できている" }
+  ];
+  var ES_STATEMENTS_PARTTIME = [
+    { key: "human",      scale: "manzoku", text: "今の職場の人間関係（先輩・社員との関係）に満足している" },
+    { key: "shift",      scale: "manzoku", text: "シフトの融通や、働く時間帯の希望の通りやすさに満足している" },
+    { key: "support",    scale: "manzoku", text: "分からないことを気軽に聞ける、教えてもらえる環境だと感じている" },
+    { key: "recreation", scale: "omou",    text: "職場のレクリエーションや親睦イベントなどがあれば、参加してみたいと思う" }
   ];
 
   // 回答者本人に見せる「キャラクター診断」。一番スコアの高かった項目1つだけで決まる、遊び要素。
@@ -390,7 +396,7 @@
             rawByID = new Array(STATEMENTS_MASTER.length).fill(3);
             STATEMENTS.forEach(function (qq, i) { rawByID[qq.id] = answers[i] || 3; });
             phase = "es";
-            STATEMENTS = ES_STATEMENTS;
+            STATEMENTS = employmentType === "1" ? ES_STATEMENTS_STAFF : ES_STATEMENTS_PARTTIME;
             current = 0;
             answers = new Array(STATEMENTS.length).fill(null);
             renderQuestion();
