@@ -144,8 +144,9 @@
     <p>自分でも気づいていない、あなたの「仕事での自然なクセ」を見つける診断です。良い・悪いはありません。
     構えずに、パッと思い浮かんだ方で気軽に答えてください。所要時間は8〜9分ほどです。</p>
     <div class="name-field">
-      <label for="name-input">お名前（任意）</label>
+      <label for="name-input">お名前（必須）</label>
       <input type="text" id="name-input" class="name-input" placeholder="例：山田太郎">
+      <p class="employment-error" id="name-error" hidden>お名前を入力してください</p>
     </div>
     <div class="employment-field">
       <label>雇用形態（必須）</label>
@@ -372,11 +373,13 @@
   btnEmpPart.addEventListener("click", function () { selectEmployment("2", btnEmpPart, btnEmpStaff); });
 
   document.getElementById("btn-start").addEventListener("click", function () {
-    if (!employmentType) {
-      document.getElementById("employment-error").hidden = false;
-      return;
-    }
-    respondentName = document.getElementById("name-input").value.trim() || "匿名";
+    var nameValue = document.getElementById("name-input").value.trim();
+    var nameMissing = !nameValue;
+    var empMissing = !employmentType;
+    document.getElementById("name-error").hidden = !nameMissing;
+    document.getElementById("employment-error").hidden = !empMissing;
+    if (nameMissing || empMissing) return;
+    respondentName = nameValue;
     phase = "main";
     STATEMENTS = shuffle(STATEMENTS_MASTER.slice());
     current = 0;
